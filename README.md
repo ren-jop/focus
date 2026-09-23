@@ -2,7 +2,7 @@
 
 **Focus** is a native macOS menu-bar focus timer by Ren Jopson with configurable countdown and count-up sessions.
 
-**Author:** [Ren Jopson](https://ren-jop.github.io/ren-jopson/)  
+**Author:** [Ren Jopson](https://ren-jop.github.io/)  
 **Website:** https://ren-jop.github.io/focus/  
 **Latest source snapshot:** v1.7
 
