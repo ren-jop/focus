@@ -7,7 +7,7 @@ bad(){ echo "FAIL  $1"; fail=$((fail+1)); }
 APP="$HOME/Applications/Focus.app"
 BIN="$APP/Contents/MacOS/Focus"
 DEADLOCK="/Applications/deadlock.app/Contents/MacOS/deadlock"
-EXPECTED_VERSION="1.7"
+EXPECTED_VERSION="1.7.1"
 
 [[ -d "$APP" ]] && pass "Focus.app installed" || bad "Focus.app installed"
 [[ -x "$BIN" ]] && pass "Focus executable" || bad "Focus executable"
