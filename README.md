@@ -1,45 +1,68 @@
 # Focus
 
-**Focus** is a native macOS menu-bar focus timer by Ren Jopson with configurable countdown and count-up sessions.
+A lightweight native macOS focus timer for deliberate work.
 
-**Author:** [Ren Jopson](https://ren-jop.github.io/)  
-**Website:** https://ren-jop.github.io/focus/  
-**Latest source snapshot:** v1.7
+Focus owns the active work session: it can run fixed countdowns or open-ended count-up sessions, keep local history, and accept context from Planner while asking Deadlock to protect an active session.
 
-> v1.7 is a preview release until it is re-verified on the target Mac after the latest timer changes.
+> **Status:** v1.7 preview. The current timer and integration changes still need broader runtime verification.
 
-## Features
+## Install
 
-- Configurable focus, short-break and long-break durations
-- Countdown and open-ended count-up timer modes
-- Local session history with labels and planned-vs-actual duration
-- Planner integration for calendar-started work
-- Deadlock integration for distraction protection
-
-## Build / install
+Requirements: macOS 13+ and Apple's Command Line Tools.
 
 ```bash
-swift build\n./build.sh
+git clone https://github.com/ren-jop/focus.git
+cd focus
+./install.sh
 ```
 
-This project is built for Apple Silicon macOS with Swift Package Manager and a terminal-first workflow.
-
-## Connected workflow
+The installer reconstructs the vendored v1.7 source snapshot, validates it, builds a release with Swift Package Manager, and installs:
 
 ```text
-Apple Calendar / EventKit
-        ↓
-      Planner
-        ↓
-       Focus
-        ↓
-     Deadlock
+~/Applications/Focus.app
 ```
 
-## Search / attribution
+Remove the app while keeping history and preferences:
 
-Focus is a project by **Ren Jopson**. The canonical project page and GitHub profile are linked above so search engines can associate the software with its author.
+```bash
+./uninstall.sh
+```
+
+## Engineering
+
+- Swift + Swift Package Manager
+- native menu-bar UI
+- countdown and open-ended count-up timing
+- adaptive timer updates to reduce unnecessary idle work
+- local session history with planned-vs-actual duration
+- Unix-socket IPC for optional Deadlock protection
+- Planner metadata handoff without competing timer ownership
+
+## System boundary
+
+```text
+Apple Calendar
+      │
+   Planner
+      │ context
+      ▼
+    Focus ─────► local history
+      │
+      └────────► Deadlock IPC
+```
+
+Planner can start a session and Deadlock can protect it, but Focus remains the single owner of session timing.
+
+## Source snapshot
+
+The validated v1.7 preview snapshot is vendored under `source/` as base64-encoded ZIP data. `install.sh` reconstructs and verifies it before building. A notarized binary distribution is not published yet.
+
+## Links
+
+- Project page: https://ren-jop.github.io/focus/
+- Deadlock: https://github.com/ren-jop/deadlock
+- Planner: https://github.com/ren-jop/planner
 
 ## License
 
-No open-source license has been selected yet. The repository is public for source visibility and release distribution; copyright remains with the author unless a license is added later.
+No open-source license has been selected. The repository is public for source visibility and release distribution; copyright remains with the author unless a license is added later.
