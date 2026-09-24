@@ -1052,22 +1052,16 @@ final class Pomo: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
 
-        // Countdown mode keeps the lower-overhead adaptive cadence.
-        let cadence: TimeInterval = remaining <= 60 ? 1 : 5
-        let delay = min(remaining, cadence)
+        // Keep the displayed countdown moving once per second for the entire
+        // focus/break session. The wall-clock deadline remains authoritative,
+        // so delayed ticks or app wake-ups cannot accumulate timer drift.
+        let delay = min(remaining, 1)
 
         let t = DispatchSource.makeTimerSource(queue: .main)
-        if remaining <= 60 {
-            t.schedule(
-                deadline: .now() + delay,
-                leeway: .milliseconds(150)
-            )
-        } else {
-            t.schedule(
-                deadline: .now() + delay,
-                leeway: .seconds(1)
-            )
-        }
+        t.schedule(
+            deadline: .now() + delay,
+            leeway: .milliseconds(80)
+        )
 
         t.setEventHandler { [weak self] in
             self?.tick()
