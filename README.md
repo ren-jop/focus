@@ -1,16 +1,16 @@
 # Focus
 
-A lightweight native macOS menu-bar focus timer for running focused work sessions without turning the timer itself into a distraction.
+A small native macOS timer for focused work.
 
-**Current version:** v1.7 preview  
+**Status:** v1.7 preview  
 **Platform:** macOS 13+  
-**Stack:** Swift, Swift Package Manager, AppKit
+**Stack:** Swift, AppKit, SwiftPM
 
-> Focus is preview software. The current v1.7 timer changes should be verified on your Mac before you rely on them for important workflows.
+## Why
+
+I wanted a timer that was fast to start and small enough that it did not become another productivity system to manage.
 
 ## Install
-
-You need the macOS Command Line Tools / Swift toolchain.
 
 ```bash
 git clone --depth 1 https://github.com/ren-jop/focus.git
@@ -18,55 +18,24 @@ cd focus
 ./install.sh
 ```
 
-Focus builds locally, is ad-hoc signed, and installs to:
+Focus installs to:
 
 ```text
 ~/Applications/Focus.app
 ```
 
-No package manager or third-party dependencies are required.
-
-### Update
-
-```bash
-git pull --ff-only
-./install.sh
-```
-
-### Uninstall
-
-```bash
-./uninstall.sh
-```
-
-Uninstalling the app does not delete your session history.
-
 ## What it does
 
-- Configurable focus, short-break and long-break durations
-- Countdown and open-ended count-up sessions
-- Local work history with labels and planned-vs-actual duration
-- Optional launch at login
-- Optional Anki, Obsidian and macOS Focus-mode integrations
-- Optional Deadlock integration for distraction protection
+- Countdown sessions.
+- Open-ended count-up sessions.
+- Configurable focus and break durations.
+- Local work history.
+- Labels and planned-vs-actual duration.
+- Optional launch at login.
+- Optional Anki, Obsidian and macOS Focus integrations.
+- Optional Deadlock integration for distraction blocking.
 
-Focus keeps its responsibilities narrow: it owns the work session and history; Deadlock owns blocking.
-
-## Development
-
-Build the executable without installing the app:
-
-```bash
-swift build -c release
-```
-
-Build and install the app bundle:
-
-```bash
-./build.sh
-```
-
-The source of truth is `Sources/Focus/main.swift`. CI compiles the Swift package on macOS for every push and pull request.
+Focus owns the active work session. It does not own the calendar or Deadlock's blocking policy.
 
 ## Data
 
@@ -76,12 +45,30 @@ Session history is stored locally under:
 ~/Library/Application Support/Focus/
 ```
 
-## Project links
+## Update
 
-- Project page: https://ren-jop.github.io/focus/
-- Portfolio: https://ren-jop.github.io/
-- Author: Ren Jopson
+```bash
+git pull --ff-only
+./install.sh
+```
+
+## Uninstall
+
+```bash
+./uninstall.sh
+```
+
+Uninstalling the app does not delete session history.
+
+## Development
+
+```bash
+swift build -c release
+./build.sh
+```
+
+CI builds the Swift package on macOS.
 
 ## License
 
-No open-source license has been selected yet. The repository is public for source visibility and review; copyright remains with the author unless a license is added later.
+No open-source license has been selected yet.
