@@ -42,8 +42,8 @@ cat > "$STAGE/Focus.app/Contents/Info.plist" <<'EOF'
     <key>CFBundleDisplayName</key><string>Focus</string>
     <key>CFBundleExecutable</key><string>Focus</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleVersion</key><string>8</string>
-    <key>CFBundleShortVersionString</key><string>1.7</string>
+    <key>CFBundleVersion</key><string>9</string>
+    <key>CFBundleShortVersionString</key><string>1.7.1</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>LSUIElement</key><true/>
     <key>LSMultipleInstancesProhibited</key><true/>
