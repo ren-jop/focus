@@ -1,10 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-[[ "$(uname -s)" == "Darwin" ]] || { echo "error: macOS only." >&2; exit 1; }
+APP="$HOME/Applications/Focus.app"
 
 pkill -x Focus 2>/dev/null || true
-rm -rf "$HOME/Applications/Focus.app"
+rm -rf "$APP"
 
-echo "Focus.app removed."
-echo "Session history and preferences were kept."
+echo "Removed $APP"
+echo "Session history in ~/Library/Application Support/Focus was left intact."

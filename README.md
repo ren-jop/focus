@@ -1,68 +1,87 @@
 # Focus
 
-A lightweight native macOS focus timer for deliberate work.
+A lightweight native macOS menu-bar focus timer for running focused work sessions without turning the timer itself into a distraction.
 
-Focus owns the active work session: it can run fixed countdowns or open-ended count-up sessions, keep local history, and accept context from Planner while asking Deadlock to protect an active session.
+**Current version:** v1.7 preview  
+**Platform:** macOS 13+  
+**Stack:** Swift, Swift Package Manager, AppKit
 
-> **Status:** v1.7 preview. The current timer and integration changes still need broader runtime verification.
+> Focus is preview software. The current v1.7 timer changes should be verified on your Mac before you rely on them for important workflows.
 
 ## Install
 
-Requirements: macOS 13+ and Apple's Command Line Tools.
+You need the macOS Command Line Tools / Swift toolchain.
 
 ```bash
-git clone https://github.com/ren-jop/focus.git
+git clone --depth 1 https://github.com/ren-jop/focus.git
 cd focus
 ./install.sh
 ```
 
-The installer reconstructs the vendored v1.7 source snapshot, validates it, builds a release with Swift Package Manager, and installs:
+Focus builds locally, is ad-hoc signed, and installs to:
 
 ```text
 ~/Applications/Focus.app
 ```
 
-Remove the app while keeping history and preferences:
+No package manager or third-party dependencies are required.
+
+### Update
+
+```bash
+git pull --ff-only
+./install.sh
+```
+
+### Uninstall
 
 ```bash
 ./uninstall.sh
 ```
 
-## Engineering
+Uninstalling the app does not delete your session history.
 
-- Swift + Swift Package Manager
-- native menu-bar UI
-- countdown and open-ended count-up timing
-- adaptive timer updates to reduce unnecessary idle work
-- local session history with planned-vs-actual duration
-- Unix-socket IPC for optional Deadlock protection
-- Planner metadata handoff without competing timer ownership
+## What it does
 
-## System boundary
+- Configurable focus, short-break and long-break durations
+- Countdown and open-ended count-up sessions
+- Local work history with labels and planned-vs-actual duration
+- Optional launch at login
+- Optional Anki, Obsidian and macOS Focus-mode integrations
+- Optional Deadlock integration for distraction protection
 
-```text
-Apple Calendar
-      │
-   Planner
-      │ context
-      ▼
-    Focus ─────► local history
-      │
-      └────────► Deadlock IPC
+Focus keeps its responsibilities narrow: it owns the work session and history; Deadlock owns blocking.
+
+## Development
+
+Build the executable without installing the app:
+
+```bash
+swift build -c release
 ```
 
-Planner can start a session and Deadlock can protect it, but Focus remains the single owner of session timing.
+Build and install the app bundle:
 
-## Source snapshot
+```bash
+./build.sh
+```
 
-The validated v1.7 preview snapshot is vendored under `source/` as base64-encoded ZIP data. `install.sh` reconstructs and verifies it before building. A notarized binary distribution is not published yet.
+The source of truth is `Sources/Focus/main.swift`. CI compiles the Swift package on macOS for every push and pull request.
 
-## Links
+## Data
+
+Session history is stored locally under:
+
+```text
+~/Library/Application Support/Focus/
+```
+
+## Project links
 
 - Project page: https://ren-jop.github.io/focus/
-- Deadlock: https://github.com/ren-jop/deadlock
-- Planner: https://github.com/ren-jop/planner
+- Portfolio: https://ren-jop.github.io/
+- Author: Ren Jopson
 
 ## License
 
-No open-source license has been selected. The repository is public for source visibility and release distribution; copyright remains with the author unless a license is added later.
+No open-source license has been selected yet. The repository is public for source visibility and review; copyright remains with the author unless a license is added later.
