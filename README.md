@@ -2,7 +2,7 @@
 
 A small native macOS timer for focused work.
 
-**Status:** v1.7 preview  
+**Status:** v1.7.1 preview  
 **Platform:** macOS 13+  
 **Stack:** Swift, AppKit, SwiftPM
 
@@ -26,7 +26,7 @@ Focus installs to:
 
 ## What it does
 
-- Countdown sessions.
+- Countdown sessions with a visible one-second tick.
 - Open-ended count-up sessions.
 - Configurable focus and break durations.
 - Local work history.
