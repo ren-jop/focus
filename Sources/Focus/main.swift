@@ -23,7 +23,7 @@ let minWhyLength = 10
 // ---- Integrations (set to false / "" to turn one off) ----
 let deadlockBlocksDuringFocus = true
 let deadlockExecutable = "/Applications/deadlock.app/Contents/MacOS/deadlock"
-let keepAwakeDuringFocus = true
+let defaultKeepAwakeDuringFocus = true
 /// Names of two Shortcuts you create ("Set Focus" action: Do Not Disturb on / off).
 let focusOnShortcut = "Focus On"
 let focusOffShortcut = "Focus Off"
@@ -59,6 +59,7 @@ struct TimerSettings {
     let longBreakMinutes: Int
     let longBreakEvery: Int
     let mode: FocusTimerMode
+    let keepAwake: Bool
 }
 
 final class TimerSettingsPrompt {
@@ -88,7 +89,15 @@ final class TimerSettingsPrompt {
         alert.addButton(withTitle: "Save")
         alert.addButton(withTitle: "Cancel")
 
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 350, height: 185))
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 350, height: 220))
+
+        let keepAwake = NSButton(
+            checkboxWithTitle: "Keep display awake during focus",
+            target: nil,
+            action: nil
+        )
+        keepAwake.frame = NSRect(x: 0, y: 190, width: 330, height: 20)
+        keepAwake.state = current.keepAwake ? .on : .off
 
         let mode = NSSegmentedControl(
             labels: ["Countdown", "Count Up"],
@@ -116,6 +125,7 @@ final class TimerSettingsPrompt {
             frame: NSRect(x: 238, y: 16, width: 64, height: 24)
         )
 
+        view.addSubview(keepAwake)
         view.addSubview(label("Focus mode", frame: NSRect(x: 0, y: 154, width: 110, height: 20)))
         view.addSubview(mode)
 
@@ -151,7 +161,8 @@ final class TimerSettingsPrompt {
             shortBreakMinutes: clamped(shortBreak, default: current.shortBreakMinutes, 1...120),
             longBreakMinutes: clamped(longBreak, default: current.longBreakMinutes, 1...240),
             longBreakEvery: clamped(every, default: current.longBreakEvery, 1...12),
-            mode: mode.selectedSegment == 1 ? .countUp : .countdown
+            mode: mode.selectedSegment == 1 ? .countUp : .countdown,
+            keepAwake: keepAwake.state == .on
         )
     }
 }
@@ -172,6 +183,94 @@ struct Entry: Codable {
 var logURL: URL {
     FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("Focus/log.jsonl")
+}
+
+var logSummaryURL: URL {
+    FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("Focus/focus-log.md")
+}
+
+func readLogEntries() -> [Entry] {
+    guard let data = try? Data(contentsOf: logURL) else { return [] }
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    return data.split(separator: 0x0A).compactMap {
+        try? decoder.decode(Entry.self, from: Data($0))
+    }.sorted { $0.date > $1.date }
+}
+
+@discardableResult
+func writeLogSummary() -> URL? {
+    let entries = readLogEntries()
+    let calendar = Calendar.current
+    let dayFormatter = DateFormatter()
+    dayFormatter.dateFormat = "yyyy-MM-dd"
+    let timeFormatter = DateFormatter()
+    timeFormatter.dateFormat = "HH:mm"
+
+    let grouped = Dictionary(grouping: entries) {
+        calendar.startOfDay(for: $0.date)
+    }
+    let days = grouped.keys.sorted(by: >)
+
+    func duration(_ minutes: Int) -> String {
+        minutes >= 60 ? "\(minutes / 60)h \(minutes % 60)m" : "\(minutes)m"
+    }
+
+    func escaped(_ value: String?) -> String {
+        (value ?? "")
+            .replacingOccurrences(of: "|", with: "\\|")
+            .replacingOccurrences(of: "\n", with: " ")
+    }
+
+    var lines = [
+        "# Focus log",
+        "",
+        "Daily totals from completed and stopped focus sessions.",
+        "",
+        "| Date | Total | Sessions | Completed |",
+        "| --- | ---: | ---: | ---: |"
+    ]
+
+    for day in days {
+        let items = grouped[day] ?? []
+        let total = items.reduce(0) { $0 + $1.minutes }
+        let completed = items.filter { $0.kind == "completed" }.count
+        lines.append("| \(dayFormatter.string(from: day)) | \(duration(total)) | \(items.count) | \(completed) |")
+    }
+    if days.isEmpty { lines.append("| — | 0m | 0 | 0 |") }
+
+    for day in days {
+        let items = (grouped[day] ?? []).sorted { $0.date < $1.date }
+        let total = items.reduce(0) { $0 + $1.minutes }
+        lines.append("")
+        lines.append("## \(dayFormatter.string(from: day)) — \(duration(total)) · \(items.count) session\(items.count == 1 ? "" : "s")")
+        lines.append("")
+        for entry in items {
+            var detail = "- \(timeFormatter.string(from: entry.date)) · \(duration(entry.minutes)) · \(entry.kind)"
+            if let label = entry.label, !label.isEmpty { detail += " · **\(escaped(label))**" }
+            if let planned = entry.plannedMinutes { detail += " · planned \(duration(planned))" }
+            if let rating = entry.rating { detail += " · \(rating)/5" }
+            lines.append(detail)
+            if let why = entry.why, !why.isEmpty { lines.append("  - why: \(escaped(why))") }
+            if let improve = entry.improve, !improve.isEmpty { lines.append("  - next time: \(escaped(improve))") }
+        }
+    }
+
+    do {
+        try FileManager.default.createDirectory(
+            at: logSummaryURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try (lines.joined(separator: "\n") + "\n").write(
+            to: logSummaryURL,
+            atomically: true,
+            encoding: .utf8
+        )
+        return logSummaryURL
+    } catch {
+        return nil
+    }
 }
 
 func appendLog(_ e: Entry) {
@@ -658,6 +757,7 @@ final class Pomo: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var deadlockMessage: String?
 
     private var configuredFocusMinutes = focusMinutes
+    private var keepAwakeEnabled = defaultKeepAwakeDuringFocus
     private var configuredShortBreakMinutes = shortBreakMinutes
     private var configuredLongBreakMinutes = longBreakMinutes
     private var configuredLongBreakEvery = longBreakEvery
@@ -699,6 +799,12 @@ final class Pomo: NSObject, NSApplicationDelegate, NSMenuDelegate {
         configuredLongBreakEvery = savedLongBreakEvery > 0
             ? min(12, max(1, savedLongBreakEvery))
             : longBreakEvery
+
+        if defaults.object(forKey: "keepAwakeDuringFocus") == nil {
+            keepAwakeEnabled = defaultKeepAwakeDuringFocus
+        } else {
+            keepAwakeEnabled = defaults.bool(forKey: "keepAwakeDuringFocus")
+        }
 
         preferredTimerMode = FocusTimerMode(
             rawValue: defaults.string(forKey: "preferredTimerMode") ?? ""
@@ -759,7 +865,7 @@ final class Pomo: NSObject, NSApplicationDelegate, NSMenuDelegate {
                         Double(max(60, focusDurationSeconds))
                     )
                 startTicker()
-                setAwake(keepAwakeDuringFocus)
+                setAwake(keepAwakeEnabled)
                 ensureCountUpDeadlockProtection(force: true)
             } else if let dl = savedDeadline, dl > now {
                 phase = p
@@ -767,7 +873,7 @@ final class Pomo: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 startTicker()
 
                 if p == .focus {
-                    setAwake(keepAwakeDuringFocus)
+                    setAwake(keepAwakeEnabled)
 
                     let remaining = Int(
                         ceil(dl.timeIntervalSinceNow)
@@ -884,7 +990,7 @@ final class Pomo: NSObject, NSApplicationDelegate, NSMenuDelegate {
         startTicker()
 
         if p == .focus {
-            setAwake(keepAwakeDuringFocus)
+            setAwake(keepAwakeEnabled)
             runShortcut(focusOnShortcut)
             resumeMusic()
 
@@ -1176,6 +1282,7 @@ final class Pomo: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         )
         appendLog(e)
+        _ = writeLogSummary()
         appendNote(e)
         ensureTodayTotalsCurrent()
         todayMinutesCached += e.minutes
@@ -1412,7 +1519,8 @@ final class Pomo: NSObject, NSApplicationDelegate, NSMenuDelegate {
             shortBreakMinutes: configuredShortBreakMinutes,
             longBreakMinutes: configuredLongBreakMinutes,
             longBreakEvery: configuredLongBreakEvery,
-            mode: preferredTimerMode
+            mode: preferredTimerMode,
+            keepAwake: keepAwakeEnabled
         )
 
         guard let updated = TimerSettingsPrompt.run(
@@ -1426,6 +1534,7 @@ final class Pomo: NSObject, NSApplicationDelegate, NSMenuDelegate {
         configuredLongBreakMinutes = updated.longBreakMinutes
         configuredLongBreakEvery = updated.longBreakEvery
         preferredTimerMode = updated.mode
+        keepAwakeEnabled = updated.keepAwake
 
         defaults.set(
             configuredFocusMinutes,
@@ -1447,6 +1556,14 @@ final class Pomo: NSObject, NSApplicationDelegate, NSMenuDelegate {
             preferredTimerMode.rawValue,
             forKey: "preferredTimerMode"
         )
+        defaults.set(
+            keepAwakeEnabled,
+            forKey: "keepAwakeDuringFocus"
+        )
+
+        if phase == .focus {
+            setAwake(keepAwakeEnabled)
+        }
 
         if phase == .idle {
             focusDurationSeconds = configuredFocusMinutes * 60
@@ -1534,12 +1651,11 @@ final class Pomo: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func startFocus() { begin(.focus) }
     @objc private func stopTapped() { requestEnd(quit: false) }
     @objc private func quit() { requestEnd(quit: true) }
-    /// Opens the chosen Obsidian note if there is one, otherwise reveals the raw JSONL log.
+    /// Opens a generated Markdown history with per-day totals and session detail.
     @objc private func openLog() {
-        if let path = defaults.string(forKey: "note"), FileManager.default.fileExists(atPath: path) {
-            var c = URLComponents(string: "obsidian://open")!
-            c.queryItems = [URLQueryItem(name: "path", value: path)]
-            if let u = c.url { NSWorkspace.shared.open(u); return }
+        if let summary = writeLogSummary() {
+            NSWorkspace.shared.open(summary)
+            return
         }
         if FileManager.default.fileExists(atPath: logURL.path) {
             NSWorkspace.shared.activateFileViewerSelecting([logURL])
